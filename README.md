@@ -14,7 +14,7 @@ https://gum.co/IDfYg
 
 
 ## Compatibility
-It is now tested and working with 2016, 2017, 2018 and 2019.
+It is now tested and working with 2016, 2017, 2018, 2019, 2022, 2024.
 Due to time constraints I will not work on this anymore, unless there are critical bugs that appear from the latest updates.
 
 ## How it works
@@ -44,8 +44,10 @@ C:\Users\[username]\Documents\maya\scripts\onionSkinRenderer\[all the files]
 ## How to use
 Open the UI with
 ```
-import onionSkinRenderer.controller as ctl
-ctl.show()
+import onionSkinRenderer
+from onionSkinRenderer import controller as ctl
+OnionSkinToolUI = ctl.OSRController()
+OnionSkinToolUI.show(dockable=False)
 ```
 
 Docking support has been removed from the latest version because it was too unstable on Maya 2019
