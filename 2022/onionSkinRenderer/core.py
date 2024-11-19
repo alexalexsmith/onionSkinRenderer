@@ -2,7 +2,7 @@ import maya.api.OpenMaya as om
 import maya.api.OpenMayaRender as omr
 import maya.api.OpenMayaAnim as oma
 import maya.api.OpenMayaUI as omui
-import pymel.core as pm
+import maya.cmds as cmds
 import os
 import inspect
 import traceback
@@ -462,26 +462,26 @@ class ViewRenderOverride(omr.MRenderOverride):
         nextKeys = []
         pastKeys = []
 
-        nextKey = pm.findKeyframe(ts=True, w="next")
-        pastKey = pm.findKeyframe(ts=True, w="previous")
+        nextKey = cmds.findKeyframe(timeSlider=True, which="next")
+        pastKey = cmds.findKeyframe(timeSlider=True, which="previous")
 
         # add next keys to list
-        bufferKey = pm.getCurrentTime()
+        bufferKey = cmds.currentTime(query=True)
         for i in range(4):
             if nextKey <= bufferKey:
                 break
             nextKeys.append(nextKey)
             bufferKey = nextKey
-            nextKey = pm.findKeyframe(t=bufferKey, ts=True, w="next")
+            nextKey = cmds.findKeyframe(time=bufferKey, timeSlider=True, which="next")
 
         # add prev keys to list
-        bufferKey = pm.getCurrentTime()
+        bufferKey = cmds.currentTime(query=True)
         for i in range(4):
             if pastKey >= bufferKey:
                 break
             pastKeys.append(pastKey)
             bufferKey = pastKey
-            pastKey = pm.findKeyframe(t=bufferKey, ts=True, w="previous")
+            pastKey = cmds.findKeyframe(time=bufferKey, timeSlider=True, which="previous")
 
 
         pastKeys = list(reversed(pastKeys))

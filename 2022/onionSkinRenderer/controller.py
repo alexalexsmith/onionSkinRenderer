@@ -1,4 +1,3 @@
-import pymel.core as pm
 import maya.cmds as cmds
 import os
 import json
@@ -180,7 +179,7 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
         self.targetObjects_list.clear()
         for obj in self.targetObjectsSet:
             listWidget = TargetObjectListWidget()
-            listWidget.object_label.setText(obj.nodeName())
+            listWidget.object_label.setText(obj)
             listWidget.object_remove_btn.clicked.connect(lambda b_obj = obj: self.removeTargetObject(b_obj))
             listItem = QtWidgets.QListWidgetItem()
             listItem.setSizeHint(listWidget.sizeHint())
@@ -258,14 +257,14 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
     # 
     def addSelectedToTargetObjects(self):
         core.OSR_INSTANCE.addSelectedTargetObject()
-        for obj in pm.selected():
+        for obj in cmds.ls(selection=True):
             self.targetObjectsSet.add(obj)
         self.refreshObjectList()
     
     # 
     def removeSelectedFromTargetObjects(self):
         core.OSR_INSTANCE.removeSelectedTargetObject()
-        for obj in pm.selected():
+        for obj in cmds.ls(selection=True):
             if obj in self.targetObjectsSet:
                 self.targetObjectsSet.remove(obj)
         self.refreshObjectList()
@@ -303,7 +302,7 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
 
     # 
     def addAbsoluteTargetFrame(self, **kwargs):
-        frame = kwargs.setdefault('frame', pm.animation.getCurrentTime())
+        frame = kwargs.setdefault('frame', cmds.currentTime(query=True))
         if int(frame) not in self.absoluteFramesSet:
             core.OSR_INSTANCE.addAbsoluteTargetFrame(frame, 50)
             self.absoluteFramesSet.add(frame)
@@ -312,7 +311,7 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
     #
     def addAbsoluteTargetFrameFromSpinbox(self):
         frame = self.sender().parent().findChild(QtWidgets.QSpinBox, 'absolute_add_spinBox').value()
-        self.addAbsoluteTargetFrame(frame = frame)
+        self.addAbsoluteTargetFrame(frame=frame)
 
     #
     def toggleAbsoluteTargetFrame(self):
@@ -389,18 +388,14 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
 
     # togle active or saved editor between onion Skin Renderer and vp2
     def toggleRenderer(self):
-        modelPanelList = []
-        modelEditorList = pm.lsUI(editors=True)
-        # find all model panels
-        for myModelPanel in modelEditorList:
-            if myModelPanel.find('modelPanel') != -1:
-                modelPanelList.append(myModelPanel)
+        # in cmds I can get a list of model panels in 1 line
+        modelPanelList = cmds.getPanel(type="modelPanel")
 
         onionPanel = None
         # if any of those is already set to onion skin renderer
-        for modelPanel in modelPanelList:
-            if pm.uitypes.ModelEditor(modelPanel).getRendererOverrideName() == 'onionSkinRenderer':
-                onionPanel = pm.uitypes.ModelEditor(modelPanel)
+        for model_panel in modelPanelList:
+            if cmds.modelEditor(model_panel, query=True, rendererOverrideName=True) == 'onionSkinRenderer':
+                onionPanel = model_panel
                 break
 
         # if there is a panel with the onion skin renderer
@@ -409,7 +404,7 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
             try:
                 # Always better to try in the case of active panel operations
                 # as the active panel might not be a viewport.
-                onionPanel.setRendererOverrideName('')
+                cmds.modelEditor(onionPanel, edit=True, rendererOverrideName="")
                 self.activeEditor = onionPanel
             except Exception as e:
                 # Handle exception
@@ -417,16 +412,16 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
         else:
             # if there is a saved editor panel activate the renderer on it
             if self.activeEditor:
-                self.activeEditor.setRendererOverrideName('onionSkinRenderer')
+                cmds.modelEditor(self.activeEditor, edit=True, rendererOverrideName="onionSkinRenderer")
             # else toggle the active one
             else:
-                for modelPanel in modelPanelList:
-                    if pm.uitypes.ModelEditor(modelPanel).getActiveView():
+                for model_panel in modelPanelList:
+                    if cmds.modelEditor(model_panel, query=True, activeView=True):
                         try:
-                            if pm.uitypes.ModelEditor(modelPanel).getRendererOverrideName() == '':
-                                pm.uitypes.ModelEditor(modelPanel).setRendererOverrideName('onionSkinRenderer')
+                            if cmds.modelEditor(model_panel, query=True, rendererOverrideName=True) == "":
+                                cmds.modelEditor(model_panel, edit=True, rendererOverrideName="onionSkinRenderer")
                             else:
-                                pm.uitypes.ModelEditor(modelPanel).setRendererOverrideName('')
+                                cmds.modelEditor(model_panel, edit=True, rendererOverrideName="")
                         except Exception as e:
                             # Handle exception
                             print(e)
