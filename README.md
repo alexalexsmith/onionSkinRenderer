@@ -43,13 +43,20 @@ C:\Users\[username]\Documents\maya\scripts\onionSkinRenderer\[all the files]
 
 ## How to use
 Open the UI with
+2022-2024:
 ```
 import onionSkinRenderer
 from onionSkinRenderer import controller as ctl
 OnionSkinToolUI = ctl.OSRController()
 OnionSkinToolUI.show(dockable=False)
 ```
-
+2025:
+```
+import onionSkinRenderer
+from onionSkinRenderer import controller as ctl
+OnionSkinToolUI = ctl.OSRController()
+OnionSkinToolUI.show()
+```
 Docking support has been removed from the latest version because it was too unstable on Maya 2019
 
 Select an object and add it to Onion Skin Objects
