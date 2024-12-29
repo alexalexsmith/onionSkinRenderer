@@ -2,10 +2,9 @@ import maya.cmds as cmds
 import os
 import json
 import inspect
-from importlib import reload
-from PySide2 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore
 import maya.OpenMayaUI as omui
-from shiboken2 import wrapInstance
+from shiboken6 import wrapInstance
 from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 import onionSkinRenderer.core as core
@@ -21,19 +20,15 @@ import onionSkinRenderer.core_presentTarget as presentTarget
 import onionSkinRenderer.core_quadRender as quadRender
 import onionSkinRenderer.core_sceneRender as sceneRender
 
-
 '''
-2022, 2023, 2024 Version
-using pyside2
+2025 Version
 '''
 
 '''
 Naming Conventions:
-    Global variables: are in caps, seperated by "_"
     os: abbreviation for onion skin
     osr: abbreviation for onion skin renderer
 '''
-
 
 DEBUG_ALL = False
 
@@ -44,20 +39,14 @@ def getMayaMainWindow():
     return wrapInstance(int(mayaPtr), QtWidgets.QWidget)
 
 
-'''
-ONION SKIN RENDERER MAIN UI
-This class is the main ui window. It manages all user events and links to the core
-'''
-class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.Ui_onionSkinRenderer):
+class OSRController(ui_window.Ui_onionSkinRenderer, QtWidgets.QMainWindow):
 
-    # 
-    def __init__(self, parent = getMayaMainWindow()):
+    #
+    def __init__(self, parent=getMayaMainWindow(), *args, **kwargs):
         super(OSRController, self).__init__(parent)
         # the dockable feature creates this control that needs to be deleted manually
         # otherwise it throws an error that this name already exists
-        self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-        self.deleteControl('onionSkinRendererWorkspaceControl')
-        
+
         # This registers the override in maya
         # I previously had it as plugin, but this made it impossible to get
         # the OSR_INSTANCE (sth to do with python namespaces i guess)
@@ -89,7 +78,7 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
         self.saveSettings()
         core.uninitializeOverride()
         if DEBUG_ALL: print('close event end')
-    
+
     # special event for the dockable feature
     def dockCloseEventTriggered(self, event):
         if DEBUG_ALL: print('dock close event start')
@@ -136,24 +125,22 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
         self.onionSkinFrames_grp.clicked.connect(self.toggleGroupBox)
         self.onionSkinSettings_grp.clicked.connect(self.toggleGroupBox)
 
-
-
     # ------------------
     # UI REFRESH
 
-    # 
+    #
     def refreshObjectList(self):
         self.targetObjects_list.clear()
         for obj in self.targetObjectsSet:
             listWidget = TargetObjectListWidget()
             listWidget.object_label.setText(obj)
-            listWidget.object_remove_btn.clicked.connect(lambda b_obj = obj: self.removeTargetObject(b_obj))
+            listWidget.object_remove_btn.clicked.connect(lambda b_obj=obj: self.removeTargetObject(b_obj))
             listItem = QtWidgets.QListWidgetItem()
             listItem.setSizeHint(listWidget.sizeHint())
             self.targetObjects_list.addItem(listItem)
             self.targetObjects_list.setItemWidget(listItem, listWidget)
 
-    # 
+    #
     def refreshRelativeFrame(self):
         activeFrames = []
         # clear the frame of all widgets first
@@ -161,16 +148,16 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
             if child.frame_visibility_btn.isChecked():
                 activeFrames.append(int(child.frame_number.text()))
             child.setParent(None)
-        
+
         # fill the relative frames list
         for index in range(self.relativeFrameCount + 1):
-            if not index-self.relativeFrameCount/2 == 0:
+            if not index - self.relativeFrameCount / 2 == 0:
                 listWidget = OnionListFrame()
-                frame = index-self.relativeFrameCount/2
+                frame = index - self.relativeFrameCount / 2
                 listWidget.frame_number.setText(str(frame))
-                listWidget.frame_opacity_slider.setValue(75/abs(index-self.relativeFrameCount/2))
+                listWidget.frame_opacity_slider.setValue(75 / abs(index - self.relativeFrameCount / 2))
                 listWidget.frame_visibility_btn.toggled.connect(self.toggleRelativeTargetFrame)
-                if frame in activeFrames: 
+                if frame in activeFrames:
                     listWidget.frame_visibility_btn.setChecked(True)
                     activeFrames.remove(frame)
                 listWidget.frame_opacity_slider.sliderMoved.connect(self.setOpacityForRelativeTargetFrame)
@@ -181,7 +168,7 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
         for frame in activeFrames:
             core.OSR_INSTANCE.removeRelativeOnion(frame)
 
-    # 
+    #
     def refreshAbsoluteFrameTargetsList(self):
         # remove any entries that don't exist anymore
         framesInList = []
@@ -190,7 +177,7 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
             framesInList.append(frame)
             if frame not in self.absoluteFramesSet:
                 self.absolute_list.takeItem(i)
-        
+
         # add any missing entry
         for frame in self.absoluteFramesSet:
             if frame not in framesInList:
@@ -199,7 +186,8 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
                 listWidget.frame_opacity_slider.setValue(core.OSR_INSTANCE.getOpacityOfAbsoluteFrame(int(frame)))
                 listWidget.addRemoveButton()
                 listWidget.frame_visibility_btn.setChecked(core.OSR_INSTANCE.absoluteTargetFrameExists(int(frame)))
-                listWidget.frame_remove_btn.clicked.connect(lambda b_frame = frame: self.removeAbsoluteTargetFrame(b_frame))
+                listWidget.frame_remove_btn.clicked.connect(
+                    lambda b_frame=frame: self.removeAbsoluteTargetFrame(b_frame))
                 listWidget.frame_visibility_btn.toggled.connect(self.toggleAbsoluteTargetFrame)
                 listWidget.frame_opacity_slider.sliderMoved.connect(self.setOpacityForAbsoluteTargetFrame)
                 listItem = QtWidgets.QListWidgetItem()
@@ -210,25 +198,22 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
                 for i in range(self.absolute_list.count()):
                     if frame < self.absolute_list.item(i).data(QtCore.Qt.UserRole):
                         break
-                    correctRow = i+1
-                
+                    correctRow = i + 1
+
                 self.absolute_list.insertItem(correctRow, listItem)
                 self.absolute_list.setItemWidget(listItem, listWidget)
-
-
-
 
     # ---------------------------
     # CONNECTIONS
 
-    # 
+    #
     def addSelectedToTargetObjects(self):
         core.OSR_INSTANCE.addSelectedTargetObject()
         for obj in cmds.ls(selection=True):
             self.targetObjectsSet.add(obj)
         self.refreshObjectList()
-    
-    # 
+
+    #
     def removeSelectedFromTargetObjects(self):
         core.OSR_INSTANCE.removeSelectedTargetObject()
         for obj in cmds.ls(selection=True):
@@ -251,7 +236,7 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
         self.targetObjectsSet.clear()
         self.refreshObjectList()
 
-    # 
+    #
     def toggleRelativeTargetFrame(self):
         sender = self.sender()
         frame = sender.parent().findChild(QtWidgets.QLabel, 'frame_number').text()
@@ -267,7 +252,7 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
         core.OSR_INSTANCE.setRelativeDisplayMode(self.sender().isChecked())
         self.saveSettings()
 
-    # 
+    #
     def addAbsoluteTargetFrame(self, **kwargs):
         frame = kwargs.setdefault('frame', cmds.currentTime(query=True))
         if int(frame) not in self.absoluteFramesSet:
@@ -289,7 +274,7 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
             core.OSR_INSTANCE.addAbsoluteTargetFrame(frame, sliderValue)
         else:
             core.OSR_INSTANCE.removeAbsoluteTargetFrame(frame)
-    
+
     #
     def removeAbsoluteTargetFrame(self, frame):
         core.OSR_INSTANCE.removeAbsoluteTargetFrame(frame)
@@ -302,11 +287,11 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
         self.absoluteFramesSet.clear()
         self.refreshAbsoluteFrameTargetsList()
 
-    # 
+    #
     def clearBuffer(self):
         core.OSR_INSTANCE.clearOnionSkinBuffer()
 
-    # 
+    #
     def pickColor(self):
         color = QtWidgets.QColorDialog.getColor()
         if color.isValid():
@@ -325,13 +310,13 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
         frame = self.sender().parent().findChild(QtWidgets.QLabel, 'frame_number').text()
         core.OSR_INSTANCE.setOpacityForAbsoluteTargetFrame(int(frame), opacity)
 
-    # 
+    #
     def setTintStrength(self):
         core.OSR_INSTANCE.setTintStrength(
             self.sender().value()
         )
 
-    # 
+    #
     def setAutoClearBuffer(self):
         value = self.sender().isChecked()
         core.OSR_INSTANCE.setAutoClearBuffer(value)
@@ -344,16 +329,17 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
             core.OSR_INSTANCE.setMaxBuffer(values['maxBuffer'])
             core.OSR_INSTANCE.setOutlineWidth(values['outlineWidth'])
             core.OSR_INSTANCE.setTintSeed(values['tintSeed'])
-            self.relativeFrameCount = values['relativeKeyCount']*2
+            self.relativeFrameCount = values['relativeKeyCount'] * 2
             self.refreshRelativeFrame()
             self.saveSettings()
-            
-    #     
+
+    #
     def setRelativeStep(self):
         core.OSR_INSTANCE.setRelativeStep(self.sender().value())
-        self.saveSettings()     
+        self.saveSettings()
 
-    # togle active or saved editor between onion Skin Renderer and vp2
+        # togle active or saved editor between onion Skin Renderer and vp2
+
     def toggleRenderer(self):
         # in cmds I can get a list of model panels in 1 line
         modelPanelList = cmds.getPanel(type="modelPanel")
@@ -393,8 +379,7 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
                             # Handle exception
                             print(e)
 
-
-    # 
+    #
     def setGlobalOpacity(self):
         core.OSR_INSTANCE.setGlobalOpacity(self.sender().value())
 
@@ -422,25 +407,20 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
             self.constant_col_widget.setMaximumHeight(16777215)
             self.constant_col_widget.setEnabled(True)
         else:
-            self.constant_col_widget.setMaximumHeight(0)    
+            self.constant_col_widget.setMaximumHeight(0)
             self.constant_col_widget.setEnabled(False)
         core.OSR_INSTANCE.setTintType(tintType)
 
-            
-            
-
-
-
     # UTILITY
-    # 
+    #
     def setOnionSkinColor(self, btn, rgba):
-            btn.setStyleSheet('background-color: rgb(%s,%s,%s);'%(rgba[0], rgba[1], rgba[2]))
-            core.OSR_INSTANCE.setTint(rgba, btn.objectName())
+        btn.setStyleSheet('background-color: rgb(%s,%s,%s);' % (rgba[0], rgba[1], rgba[2]))
+        core.OSR_INSTANCE.setTint(rgba, btn.objectName())
 
-    #Make sure settings file exists and isn't corrupted
+    # Make sure settings file exists and isn't corrupted
     def checkSettingsFile(self):
         settings_file = {}
-        with open(os.path.join(self.toolPath,'settings.txt')) as json_file:
+        with open(os.path.join(self.toolPath, 'settings.txt')) as json_file:
             settings_file = json.load(json_file)
         if len(settings_file) != len(constants.default_settings):
             with open(os.path.join(self.toolPath, 'settings.txt'), 'w') as outfile:
@@ -450,27 +430,27 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
     def loadSettings(self):
         # do a check on the settings file to make sure it's intact
         self.checkSettingsFile()
-        with open(os.path.join(self.toolPath,'settings.txt')) as json_file:  
+        with open(os.path.join(self.toolPath, 'settings.txt')) as json_file:
             self.preferences = json.load(json_file)
-            self.settings_autoClearBuffer.setChecked(self.preferences.setdefault('autoClearBuffer',True))
-            core.OSR_INSTANCE.setAutoClearBuffer(self.preferences.setdefault('autoClearBuffer',True))
+            self.settings_autoClearBuffer.setChecked(self.preferences.setdefault('autoClearBuffer', True))
+            core.OSR_INSTANCE.setAutoClearBuffer(self.preferences.setdefault('autoClearBuffer', True))
 
-            self.relative_keyframes_chkbx.setChecked(self.preferences.setdefault('displayKeyframes',True))
-            core.OSR_INSTANCE.setRelativeDisplayMode(self.preferences.setdefault('displayKeyframes',True))
+            self.relative_keyframes_chkbx.setChecked(self.preferences.setdefault('displayKeyframes', True))
+            core.OSR_INSTANCE.setRelativeDisplayMode(self.preferences.setdefault('displayKeyframes', True))
 
-            self.setOnionSkinColor(self.relative_futureTint_btn, self.preferences.setdefault('rFutureTint',[0,0,125]))
-            self.setOnionSkinColor(self.relative_pastTint_btn, self.preferences.setdefault('rPastTint',[0,125,0]))
-            self.setOnionSkinColor(self.absolute_tint_btn, self.preferences.setdefault('aTint', [125,0,0]))
+            self.setOnionSkinColor(self.relative_futureTint_btn,
+                                   self.preferences.setdefault('rFutureTint', [0, 0, 125]))
+            self.setOnionSkinColor(self.relative_pastTint_btn, self.preferences.setdefault('rPastTint', [0, 125, 0]))
+            self.setOnionSkinColor(self.absolute_tint_btn, self.preferences.setdefault('aTint', [125, 0, 0]))
             core.OSR_INSTANCE.setTintSeed(self.preferences.setdefault('tintSeed', 0))
-            self.tint_type_cBox.setCurrentIndex(self.preferences.setdefault('tintType',0))
+            self.tint_type_cBox.setCurrentIndex(self.preferences.setdefault('tintType', 0))
 
-
-            self.onionType_cBox.setCurrentIndex(self.preferences.setdefault('onionType',1))
+            self.onionType_cBox.setCurrentIndex(self.preferences.setdefault('onionType', 1))
             self.drawBehind_chkBx.setChecked(self.preferences.setdefault('drawBehind', True))
 
-            self.relativeFrameCount = self.preferences.setdefault('relativeFrameAmount',4)
+            self.relativeFrameCount = self.preferences.setdefault('relativeFrameAmount', 4)
             self.refreshRelativeFrame()
-            activeRelativeFrames = self.preferences.setdefault('activeRelativeFrames',[])
+            activeRelativeFrames = self.preferences.setdefault('activeRelativeFrames', [])
             for child in self.relative_frame.findChildren(OnionListFrame):
                 if int(float(child.frame_number.text())) in activeRelativeFrames:
                     child.frame_visibility_btn.setChecked(True)
@@ -478,9 +458,8 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
             self.relative_step_spinBox.setValue(self.preferences.setdefault('relativeStep', 1))
 
             core.OSR_INSTANCE.setMaxBuffer(self.preferences.setdefault('maxBufferSize', 200))
-            core.OSR_INSTANCE.setOutlineWidth(self.preferences.setdefault('outlineWidth',3))
+            core.OSR_INSTANCE.setOutlineWidth(self.preferences.setdefault('outlineWidth', 3))
 
-    
     # save values into a json file
     def saveSettings(self):
         if DEBUG_ALL: print('start save')
@@ -501,18 +480,18 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
         data['activeRelativeFrames'] = self.getActiveRelativeFrameIndices()
 
         try:
-            with open(os.path.join(self.toolPath,'settings.txt'), 'w') as outfile:
+            with open(os.path.join(self.toolPath, 'settings.txt'), 'w') as outfile:
                 json.dump(dict(data), outfile)
         except Exception as e:
             print("Issue saving settings file. Loading default settings")
             # loading the default settings
-            with open(os.path.join(self.toolPath,'settings.txt'), 'w') as outfile:
+            with open(os.path.join(self.toolPath, 'settings.txt'), 'w') as outfile:
                 json.dump(dict(constants.default_settings), outfile)
         if DEBUG_ALL: print('end save')
-        
-    # 
+
+    #
     def extractRGBFromStylesheet(self, s):
-        return map(int,(s[s.find("(")+1:s.find(")")]).split(','))
+        return map(int, (s[s.find("(") + 1:s.find(")")]).split(','))
 
     def getActiveRelativeFrameIndices(self):
         activeFrames = []
@@ -523,16 +502,15 @@ class OSRController(MayaQWidgetDockableMixin, QtWidgets.QMainWindow, ui_window.U
         return activeFrames
 
 
-
-
-
 '''
 FRAME WIDGET
 the widget for displaying a frame in a list. includes visibility, opacity slider
 and on demand a remove button   
 '''
+
+
 class OnionListFrame(QtWidgets.QWidget, wdgt_Frame.Ui_onionSkinFrame_layout):
-    def __init__(self, parent = getMayaMainWindow()):
+    def __init__(self, parent=getMayaMainWindow()):
         super(OnionListFrame, self).__init__(parent)
         self.setupUi(self)
 
@@ -546,29 +524,31 @@ class OnionListFrame(QtWidgets.QWidget, wdgt_Frame.Ui_onionSkinFrame_layout):
         self.frame_remove_btn.setMinimumSize(QtCore.QSize(16, 16))
         self.frame_remove_btn.setMaximumSize(QtCore.QSize(16, 16))
         self.frame_widget_layout.addWidget(self.frame_remove_btn)
-        
 
 
 '''
 OBJECT WIDGET
 the widget for displaying an object in a list
 '''
+
+
 class TargetObjectListWidget(QtWidgets.QWidget, wdgt_MeshListObj.Ui_onionSkinObject_layout):
-    def __init__(self, parent = getMayaMainWindow()):
+    def __init__(self, parent=getMayaMainWindow()):
         super(TargetObjectListWidget, self).__init__(parent)
         self.setupUi(self)
-
 
 
 '''
 Settings Dialog
 in this window the user can set some preferences
 '''
+
+
 class PreferencesWindow(QtWidgets.QDialog, wdgt_Preferences.Ui_onionSkinRendererPreferences):
     def __init__(self, parent):
         super(PreferencesWindow, self).__init__(parent)
         self.setupUi(self)
-        self.relativeKeyCount_spinBox.setValue(parent.relativeFrameCount/2)
+        self.relativeKeyCount_spinBox.setValue(parent.relativeFrameCount / 2)
         self.maxBuffer_spinBox.setValue(core.OSR_INSTANCE.getMaxBuffer())
         self.outlineWidth_spinBox.setValue(core.OSR_INSTANCE.getOutlineWidth())
         self.tintSeed_spinBox.setValue(core.OSR_INSTANCE.getTintSeed())
